@@ -189,6 +189,34 @@
             transform: translateY(0);
         }
 
+        .level-selector-container {
+            margin-top: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+
+        .level-selector-container label {
+            display: block;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .level-selector {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px solid var(--primary-color);
+            background: white;
+            font-size: 1rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            cursor: pointer;
+        }
+
         /* Jeu */
         .game-container {
             display: flex;
@@ -767,6 +795,11 @@
                 <p>Résolvez des grilles, améliorez votre score et devenez le maître du Sudoku !</p>
             </div>
             
+            <div class="level-selector-container">
+                <label for="level-selector">Choisir un niveau :</label>
+                <select id="level-selector" class="level-selector"></select>
+            </div>
+
             <button class="play-btn" id="start-game-btn">Commencer à jouer</button>
             
             <div class="home-description">
@@ -914,6 +947,7 @@
             const navBtns = document.querySelectorAll('.nav-btn');
             const pageTitle = document.getElementById('page-title');
             const startGameBtn = document.getElementById('start-game-btn');
+            const levelSelector = document.getElementById('level-selector');
             const sudokuGrid = document.getElementById('sudoku-grid');
             const levelDisplay = document.getElementById('level');
             const scoreDisplay = document.getElementById('score');
@@ -1067,9 +1101,8 @@
                 
                 pageTitle.textContent = 'Jeu - Sudoku Quest';
                 
-                if (!gameStarted) {
-                    initGame();
-                }
+                level = parseInt(levelSelector.value, 10);
+                startNewGame();
             });
             
             // Onglets de défis
@@ -1089,11 +1122,23 @@
                 });
             });
             
+            function updateLevelSelector() {
+                levelSelector.innerHTML = '';
+                for (let i = 1; i <= gameStats.maxLevel; i++) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = `Niveau ${i}`;
+                    levelSelector.appendChild(option);
+                }
+                levelSelector.value = gameStats.maxLevel;
+            }
+
             // Initialiser le jeu
             function initGame() {
                 createGrid();
                 generateSudoku(level);
                 updateDisplay();
+                updateLevelSelector();
                 
                 // Écouteurs d'événements
                 newGameBtn.addEventListener('click', startNewGame);
@@ -1765,8 +1810,9 @@
                 
                 // Mettre à jour les statistiques
                 gameStats.gamesWon++;
-                if (level > gameStats.maxLevel) {
-                    gameStats.maxLevel = level;
+                if (level === gameStats.maxLevel) {
+                    gameStats.maxLevel++;
+                    updateLevelSelector();
                 }
                 if (!gameStats.bestTime || timer < gameStats.bestTime) {
                     gameStats.bestTime = timer;
