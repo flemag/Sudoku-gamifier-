@@ -1,0 +1,1913 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Sudoku Quest: Adventure Through Numbers</title>
+    <style>
+        :root {
+            --primary-color: #4a6fa5;
+            --secondary-color: #6c9bd1;
+            --accent-color: #ff6b6b;
+            --background-color: #f8f9fa;
+            --text-color: #333;
+            --cell-size: 30px;
+            --border-color: #ccc;
+            --theme-bg: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            --header-height: 60px;
+            --nav-height: 70px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background: var(--theme-bg);
+            color: var(--text-color);
+            overflow-x: hidden;
+            position: relative;
+            padding-top: var(--header-height);
+            padding-bottom: var(--nav-height);
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: var(--header-height);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            text-align: center;
+            padding: 0 15px;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        /* Navigation */
+        .nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: var(--nav-height);
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 100;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .nav-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            background: none;
+            border: none;
+            padding: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 25%;
+        }
+
+        .nav-btn.active {
+            color: var(--accent-color);
+        }
+
+        .nav-btn i {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+
+        .nav-btn span {
+            font-size: 0.7rem;
+        }
+
+        /* Sections */
+        .section {
+            display: none;
+            width: 100%;
+            padding: 15px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Accueil */
+        .home-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: calc(100vh - var(--header-height) - var(--nav-height));
+            padding: 20px;
+        }
+
+        .logo {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            text-align: center;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .home-title {
+            font-size: 2rem;
+            color: white;
+            margin-bottom: 20px;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .home-description {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            text-align: center;
+        }
+
+        .home-description h2 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+
+        .home-description p {
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+
+        .play-btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+            transition: all 0.3s;
+            margin-top: 20px;
+        }
+
+        .play-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(255, 107, 107, 0.6);
+        }
+
+        .play-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Jeu */
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .info-box {
+            background: var(--primary-color);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin: 3px;
+            flex: 1;
+            min-width: 80px;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .sudoku-grid {
+            display: grid;
+            grid-template-columns: repeat(9, var(--cell-size));
+            grid-template-rows: repeat(9, var(--cell-size));
+            gap: 1px;
+            background-color: var(--border-color);
+            border: 2px solid var(--primary-color);
+            margin-bottom: 15px;
+        }
+
+        .sudoku-cell {
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .sudoku-cell:hover {
+            background-color: #e9f5ff;
+        }
+
+        .sudoku-cell.selected {
+            background-color: #cfe2ff;
+        }
+
+        .sudoku-cell.fixed {
+            background-color: #f0f0f0;
+            color: var(--primary-color);
+            cursor: default;
+        }
+
+        .sudoku-cell.error {
+            background-color: #ffebee;
+            color: var(--accent-color);
+        }
+
+        .sudoku-cell.highlight {
+            background-color: #e3f2fd;
+        }
+
+        /* Bordures épaisses pour les blocs 3x3 */
+        .sudoku-cell:nth-child(3n) {
+            border-right: 2px solid var(--border-color);
+        }
+        
+        .sudoku-cell:nth-child(n+19):nth-child(-n+27),
+        .sudoku-cell:nth-child(n+46):nth-child(-n+54) {
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 15px;
+            width: 100%;
+        }
+
+        .btn {
+            padding: 8px 12px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            flex: 1;
+            min-width: 70px;
+            font-size: 0.9rem;
+        }
+
+        .btn:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .number-pad-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            margin-bottom: 15px;
+            padding: 0 10px;
+            box-sizing: border-box;
+        }
+
+        .number-pad {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 5px;
+            width: 100%;
+            max-width: 270px;
+        }
+
+        .number-btn {
+            width: 100%;
+            aspect-ratio: 1/1;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .power-meter {
+            width: 100%;
+            height: 15px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+
+        .power-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #8bc34a);
+            width: 100%;
+            transition: width 0.5s ease;
+        }
+
+        .theme-selector {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            justify-content: center;
+        }
+
+        .theme-btn {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            cursor: pointer;
+        }
+
+        .theme-btn.active {
+            border-color: white;
+            box-shadow: 0 0 0 2px var(--primary-color);
+        }
+
+        /* Trophées */
+        .trophies-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .stats-card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            width: 100%;
+        }
+
+        .stats-card h2 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .stat-item {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .achievements-card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .achievements-card h2 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .achievements {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+        }
+
+        .achievement {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px 10px;
+            border-radius: 10px;
+            background: #f5f5f5;
+            transition: all 0.3s;
+        }
+
+        .achievement:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .achievement.unlocked {
+            background: #e8f5e9;
+            border: 1px solid #4caf50;
+        }
+
+        .achievement-icon {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .achievement-name {
+            font-size: 0.8rem;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .achievement-desc {
+            font-size: 0.7rem;
+            text-align: center;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        /* Défis */
+        .challenges-card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .challenges-card h2 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .challenge-tabs {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .challenge-tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            color: #666;
+            transition: all 0.2s;
+        }
+
+        .challenge-tab.active {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+            margin-bottom: -2px;
+        }
+
+        .challenge-content {
+            display: none;
+        }
+
+        .challenge-content.active {
+            display: block;
+        }
+
+        .challenge-item {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            position: relative;
+        }
+
+        .challenge-item.completed {
+            background: #e8f5e9;
+            border: 1px solid #4caf50;
+        }
+
+        .challenge-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: var(--primary-color);
+        }
+
+        .challenge-desc {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .challenge-progress {
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 5px;
+        }
+
+        .challenge-progress-fill {
+            height: 100%;
+            background: var(--primary-color);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .challenge-reward {
+            font-size: 0.8rem;
+            color: var(--accent-color);
+            font-weight: bold;
+        }
+
+        .challenge-timer {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: var(--primary-color);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            padding: 15px;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            animation: modalFadeIn 0.3s ease;
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: #e0e0e0;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary-color);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            z-index: 300;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translate(-50%, -20px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
+
+        /* Icônes */
+        .icon {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            :root {
+                --cell-size: 28px;
+            }
+            
+            .header h1 {
+                font-size: 1.3rem;
+            }
+            
+            .home-title {
+                font-size: 1.7rem;
+            }
+            
+            .sudoku-grid {
+                border: 1px solid var(--primary-color);
+            }
+            
+            .number-pad {
+                max-width: 250px;
+                gap: 4px;
+            }
+            
+            .number-btn {
+                font-size: 1rem;
+            }
+            
+            .nav-btn i {
+                font-size: 1.3rem;
+            }
+            
+            .nav-btn span {
+                font-size: 0.65rem;
+            }
+        }
+
+        @media (max-height: 700px) {
+            :root {
+                --header-height: 50px;
+                --nav-height: 60px;
+            }
+            
+            .header h1 {
+                font-size: 1.2rem;
+            }
+            
+            .nav-btn i {
+                font-size: 1.2rem;
+            }
+            
+            .nav-btn span {
+                font-size: 0.6rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <h1 id="page-title">Sudoku Quest</h1>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav">
+        <button class="nav-btn active" data-section="home">
+            <i class="icon">🏠</i>
+            <span>Accueil</span>
+        </button>
+        <button class="nav-btn" data-section="game">
+            <i class="icon">🎮</i>
+            <span>Jeu</span>
+        </button>
+        <button class="nav-btn" data-section="trophies">
+            <i class="icon">🏆</i>
+            <span>Trophées</span>
+        </button>
+    </div>
+
+    <!-- Section Accueil -->
+    <section class="section active" id="home">
+        <div class="home-container">
+            <div class="logo">🧩</div>
+            <h1 class="home-title">Sudoku Quest</h1>
+            
+            <div class="home-description">
+                <h2>Bienvenue dans l'aventure Sudoku !</h2>
+                <p>Plongez dans une expérience de Sudoku gamifiée avec des défis progressifs, des thèmes visuels et des trophées à débloquer.</p>
+                <p>Résolvez des grilles, améliorez votre score et devenez le maître du Sudoku !</p>
+            </div>
+            
+            <button class="play-btn" id="start-game-btn">Commencer à jouer</button>
+            
+            <div class="home-description">
+                <h2>Comment jouer ?</h2>
+                <p>1. Remplissez la grille avec des chiffres de 1 à 9</p>
+                <p>2. Chaque ligne, colonne et bloc 3x3 doit contenir tous les chiffres sans répétition</p>
+                <p>3. Utilisez les indices et vérifications pour vous aider</p>
+                <p>4. Débloquez des trophées en atteignant des objectifs spécifiques</p>
+                <p>5. Relevez des défis journaliers et hebdomadaires pour des récompenses exclusives</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section Jeu -->
+    <section class="section" id="game">
+        <div class="game-container">
+            <div class="game-info">
+                <div class="info-box">
+                    <div>Niveau</div>
+                    <div id="level">1</div>
+                </div>
+                <div class="info-box">
+                    <div>Score</div>
+                    <div id="score">0</div>
+                </div>
+                <div class="info-box">
+                    <div>Temps</div>
+                    <div id="timer">00:00</div>
+                </div>
+            </div>
+
+            <div class="power-meter">
+                <div class="power-fill" id="power-fill"></div>
+            </div>
+
+            <div class="sudoku-grid" id="sudoku-grid"></div>
+
+            <div class="controls">
+                <button class="btn" id="new-game-btn">Nouveau</button>
+                <button class="btn" id="hint-btn">Indice (3)</button>
+                <button class="btn" id="check-btn">Vérifier</button>
+                <button class="btn" id="erase-btn">Effacer</button>
+            </div>
+
+            <div class="number-pad-container">
+                <div class="number-pad">
+                    <button class="btn number-btn" data-number="1">1</button>
+                    <button class="btn number-btn" data-number="2">2</button>
+                    <button class="btn number-btn" data-number="3">3</button>
+                    <button class="btn number-btn" data-number="4">4</button>
+                    <button class="btn number-btn" data-number="5">5</button>
+                    <button class="btn number-btn" data-number="6">6</button>
+                    <button class="btn number-btn" data-number="7">7</button>
+                    <button class="btn number-btn" data-number="8">8</button>
+                    <button class="btn number-btn" data-number="9">9</button>
+                    <button class="btn number-btn" id="note-btn">Note</button>
+                </div>
+            </div>
+
+            <div class="theme-selector">
+                <div class="theme-btn active" data-theme="space" style="background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);"></div>
+                <div class="theme-btn" data-theme="ocean" style="background: linear-gradient(135deg, #2E3192, #1BFFFF);"></div>
+                <div class="theme-btn" data-theme="forest" style="background: linear-gradient(135deg, #134E5E, #71B280);"></div>
+                <div class="theme-btn" data-theme="sunset" style="background: linear-gradient(135deg, #ff7e5f, #feb47b);"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section Trophées -->
+    <section class="section" id="trophies">
+        <div class="trophies-container">
+            <div class="stats-card">
+                <h2>Vos Statistiques</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="stat-games">0</div>
+                        <div class="stat-label">Parties jouées</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="stat-wins">0</div>
+                        <div class="stat-label">Parties gagnées</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="stat-level">1</div>
+                        <div class="stat-label">Niveau max</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="stat-time">0:00</div>
+                        <div class="stat-label">Meilleur temps</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="stat-score">0</div>
+                        <div class="stat-label">Meilleur score</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="stat-achievements">0/10</div>
+                        <div class="stat-label">Trophées</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="challenges-card">
+                <h2>Défis</h2>
+                <div class="challenge-tabs">
+                    <button class="challenge-tab active" data-challenge="daily">Quotidiens</button>
+                    <button class="challenge-tab" data-challenge="weekly">Hebdomadaires</button>
+                </div>
+                
+                <div class="challenge-content active" id="daily-challenges">
+                    <!-- Les défis quotidiens seront générés par JavaScript -->
+                </div>
+                
+                <div class="challenge-content" id="weekly-challenges">
+                    <!-- Les défis hebdomadaires seront générés par JavaScript -->
+                </div>
+            </div>
+            
+            <div class="achievements-card">
+                <h2>Trophées à Débloquer</h2>
+                <div class="achievements" id="achievements-container"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Modal pour la victoire -->
+    <div class="modal" id="victory-modal">
+        <div class="modal-content">
+            <h2>Félicitations !</h2>
+            <p>Vous avez complété le niveau <span id="completed-level"></span> !</p>
+            <p>Score: <span id="final-score"></span></p>
+            <p>Temps: <span id="final-time"></span></p>
+            <div class="progress-bar">
+                <div class="progress-fill" id="level-progress"></div>
+            </div>
+            <p>Prochain niveau: <span id="next-level"></span></p>
+            <button class="btn" id="next-level-btn">Niveau Suivant</button>
+            <button class="btn" id="back-to-menu-btn">Retour au menu</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Éléments DOM
+            const sections = document.querySelectorAll('.section');
+            const navBtns = document.querySelectorAll('.nav-btn');
+            const pageTitle = document.getElementById('page-title');
+            const startGameBtn = document.getElementById('start-game-btn');
+            const sudokuGrid = document.getElementById('sudoku-grid');
+            const levelDisplay = document.getElementById('level');
+            const scoreDisplay = document.getElementById('score');
+            const timerDisplay = document.getElementById('timer');
+            const powerFill = document.getElementById('power-fill');
+            const newGameBtn = document.getElementById('new-game-btn');
+            const hintBtn = document.getElementById('hint-btn');
+            const checkBtn = document.getElementById('check-btn');
+            const eraseBtn = document.getElementById('erase-btn');
+            const noteBtn = document.getElementById('note-btn');
+            const victoryModal = document.getElementById('victory-modal');
+            const nextLevelBtn = document.getElementById('next-level-btn');
+            const backToMenuBtn = document.getElementById('back-to-menu-btn');
+            const achievementsContainer = document.getElementById('achievements-container');
+            const themeButtons = document.querySelectorAll('.theme-btn');
+            const numberButtons = document.querySelectorAll('.number-btn');
+            
+            // Éléments de statistiques
+            const statGames = document.getElementById('stat-games');
+            const statWins = document.getElementById('stat-wins');
+            const statLevel = document.getElementById('stat-level');
+            const statTime = document.getElementById('stat-time');
+            const statScore = document.getElementById('stat-score');
+            const statAchievements = document.getElementById('stat-achievements');
+            
+            // Éléments de défis
+            const challengeTabs = document.querySelectorAll('.challenge-tab');
+            const dailyChallengesContainer = document.getElementById('daily-challenges');
+            const weeklyChallengesContainer = document.getElementById('weekly-challenges');
+            
+            // État du jeu
+            let gameBoard = [];
+            let solutionBoard = [];
+            let selectedCell = null;
+            let level = 1;
+            let score = 0;
+            let hints = 3;
+            let notesMode = false;
+            let timer = 0;
+            let timerInterval = null;
+            let power = 100;
+            let gameStarted = false;
+            let completedLevels = JSON.parse(localStorage.getItem('completedLevels')) || [];
+            let unlockedAchievements = JSON.parse(localStorage.getItem('unlockedAchievements')) || [];
+            let gameStats = JSON.parse(localStorage.getItem('gameStats')) || {
+                gamesPlayed: 0,
+                gamesWon: 0,
+                maxLevel: 1,
+                bestTime: null,
+                bestScore: 0,
+                dailyGames: 0,
+                weeklyGames: 0,
+                lastDailyReset: null,
+                lastWeeklyReset: null
+            };
+            
+            // Tableau pour suivre les cellules déjà marquées comme correctes
+            let correctCells = [];
+            
+            // Défis
+            let dailyChallenges = JSON.parse(localStorage.getItem('dailyChallenges')) || [];
+            let weeklyChallenges = JSON.parse(localStorage.getItem('weeklyChallenges')) || [];
+            
+            // Thèmes
+            const themes = {
+                space: 'linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d)',
+                ocean: 'linear-gradient(135deg, #2E3192, #1BFFFF)',
+                forest: 'linear-gradient(135deg, #134E5E, #71B280)',
+                sunset: 'linear-gradient(135deg, #ff7e5f, #feb47b)'
+            };
+            
+            // Succès
+            const achievements = [
+                { id: 'first-win', name: 'Première Victoire', icon: '🏆', description: 'Compléter votre premier Sudoku' },
+                { id: 'speed-demon', name: 'Démon de la Vitesse', icon: '⚡', description: 'Compléter un niveau en moins de 5 minutes' },
+                { id: 'perfectionist', name: 'Perfectionniste', icon: '💎', description: 'Compléter un niveau sans utiliser d\'indices' },
+                { id: 'persistent', name: 'Persévérant', icon: '🔥', description: 'Jouer pendant 30 minutes' },
+                { id: 'explorer', name: 'Explorateur', icon: '🗺️', description: 'Essayer tous les thèmes' },
+                { id: 'master', name: 'Maître du Sudoku', icon: '👑', description: 'Atteindre le niveau 10' },
+                { id: 'daily-warrior', name: 'Guerrier Quotidien', icon: '🗓️', description: 'Compléter 3 défis quotidiens' },
+                { id: 'weekly-champion', name: 'Champion Hebdomadaire', icon: '🏅', description: 'Compléter 2 défis hebdomadaires' },
+                { id: 'challenge-master', name: 'Maître des Défis', icon: '🎯', description: 'Compléter 5 défis consécutifs' },
+                { id: 'sudoku-ninja', name: 'Ninja du Sudoku', icon: '🥷', description: 'Compléter un niveau sans aucune erreur' }
+            ];
+            
+            // Défis quotidiens possibles
+            const possibleDailyChallenges = [
+                { id: 'daily-1', title: 'Débutant', description: 'Compléter 1 partie facile', target: 1, reward: 50, type: 'games', difficulty: 'easy' },
+                { id: 'daily-2', title: 'Joueur assidu', description: 'Compléter 2 parties', target: 2, reward: 100, type: 'games' },
+                { id: 'daily-3', title: 'Expert du jour', description: 'Compléter 1 partie difficile', target: 1, reward: 150, type: 'games', difficulty: 'hard' },
+                { id: 'daily-4', title: 'Rapide comme l\'éclair', description: 'Compléter une partie en moins de 10 minutes', target: 1, reward: 120, type: 'time', timeLimit: 600 },
+                { id: 'daily-5', title: 'Sans faute', description: 'Compléter une partie sans utiliser la vérification', target: 1, reward: 130, type: 'noCheck' }
+            ];
+            
+            // Défis hebdomadaires possibles
+            const possibleWeeklyChallenges = [
+                { id: 'weekly-1', title: 'Marathonien', description: 'Compléter 10 parties', target: 10, reward: 300, type: 'games' },
+                { id: 'weekly-2', title: 'Maître du temps', description: 'Compléter 5 parties en moins de 15 minutes chacune', target: 5, reward: 350, type: 'time', timeLimit: 900 },
+                { id: 'weekly-3', title: 'Perfectionniste', description: 'Compléter 3 parties sans utiliser d\'indices', target: 3, reward: 400, type: 'noHints' },
+                { id: 'weekly-4', title: 'Explorateur', description: 'Jouer avec tous les thèmes', target: 4, reward: 250, type: 'themes' },
+                { id: 'weekly-5', title: 'Collectionneur', description: 'Débloquer 3 nouveaux trophées', target: 3, reward: 280, type: 'achievements' }
+            ];
+            
+            // Navigation
+            navBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const targetSection = btn.dataset.section;
+                    
+                    // Mettre à jour les sections
+                    sections.forEach(section => {
+                        section.classList.remove('active');
+                    });
+                    document.getElementById(targetSection).classList.add('active');
+                    
+                    // Mettre à jour les boutons de navigation
+                    navBtns.forEach(navBtn => {
+                        navBtn.classList.remove('active');
+                    });
+                    btn.classList.add('active');
+                    
+                    // Mettre à jour le titre
+                    switch(targetSection) {
+                        case 'home':
+                            pageTitle.textContent = 'Sudoku Quest';
+                            break;
+                        case 'game':
+                            pageTitle.textContent = 'Jeu - Sudoku Quest';
+                            break;
+                        case 'trophies':
+                            pageTitle.textContent = 'Trophées - Sudoku Quest';
+                            updateStats();
+                            loadAchievements();
+                            break;
+                    }
+                });
+            });
+            
+            // Bouton pour commencer le jeu
+            startGameBtn.addEventListener('click', () => {
+                navBtns.forEach(btn => {
+                    btn.classList.remove('active');
+                    if (btn.dataset.section === 'game') {
+                        btn.classList.add('active');
+                    }
+                });
+                
+                sections.forEach(section => {
+                    section.classList.remove('active');
+                });
+                document.getElementById('game').classList.add('active');
+                
+                pageTitle.textContent = 'Jeu - Sudoku Quest';
+                
+                if (!gameStarted) {
+                    initGame();
+                }
+            });
+            
+            // Onglets de défis
+            challengeTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const challengeType = tab.dataset.challenge;
+                    
+                    // Mettre à jour les onglets
+                    challengeTabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    // Mettre à jour le contenu
+                    document.querySelectorAll('.challenge-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    document.getElementById(`${challengeType}-challenges`).classList.add('active');
+                });
+            });
+            
+            // Initialiser le jeu
+            function initGame() {
+                createGrid();
+                generateSudoku(level);
+                updateDisplay();
+                
+                // Écouteurs d'événements
+                newGameBtn.addEventListener('click', startNewGame);
+                hintBtn.addEventListener('click', useHint);
+                checkBtn.addEventListener('click', checkSolution);
+                eraseBtn.addEventListener('click', eraseCell);
+                noteBtn.addEventListener('click', toggleNotesMode);
+                nextLevelBtn.addEventListener('click', goToNextLevel);
+                backToMenuBtn.addEventListener('click', () => {
+                    victoryModal.style.display = 'none';
+                    navBtns.forEach(btn => {
+                        btn.classList.remove('active');
+                        if (btn.dataset.section === 'home') {
+                            btn.classList.add('active');
+                        }
+                    });
+                    
+                    sections.forEach(section => {
+                        section.classList.remove('active');
+                    });
+                    document.getElementById('home').classList.add('active');
+                    
+                    pageTitle.textContent = 'Sudoku Quest';
+                });
+                
+                // Thèmes
+                themeButtons.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const theme = btn.dataset.theme;
+                        document.body.style.background = themes[theme];
+                        themeButtons.forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        
+                        // Sauvegarder le thème préféré
+                        localStorage.setItem('selectedTheme', theme);
+                        
+                        // Vérifier si l'explorateur succès est débloqué
+                        const usedThemes = JSON.parse(localStorage.getItem('usedThemes')) || [];
+                        if (!usedThemes.includes(theme)) {
+                            usedThemes.push(theme);
+                            localStorage.setItem('usedThemes', JSON.stringify(usedThemes));
+                            
+                            if (usedThemes.length === Object.keys(themes).length) {
+                                unlockAchievement('explorer');
+                            }
+                            
+                            // Mettre à jour les défis de type thèmes
+                            updateChallengesProgress('themes');
+                        }
+                    });
+                });
+                
+                // Boutons de nombre
+                numberButtons.forEach(btn => {
+                    if (btn.id !== 'note-btn') {
+                        btn.addEventListener('click', () => {
+                            const number = parseInt(btn.dataset.number);
+                            if (selectedCell) {
+                                placeNumber(number);
+                            }
+                        });
+                    }
+                });
+                
+                // Charger le thème sauvegardé
+                const savedTheme = localStorage.getItem('selectedTheme') || 'space';
+                document.body.style.background = themes[savedTheme];
+                themeButtons.forEach(btn => {
+                    btn.classList.remove('active');
+                    if (btn.dataset.theme === savedTheme) {
+                        btn.classList.add('active');
+                    }
+                });
+                
+                // Charger les thèmes utilisés
+                if (!localStorage.getItem('usedThemes')) {
+                    localStorage.setItem('usedThemes', JSON.stringify([savedTheme]));
+                }
+                
+                // Mettre à jour les statistiques
+                updateStats();
+                
+                // Initialiser les défis
+                initChallenges();
+            }
+            
+            // Initialiser les défis
+            function initChallenges() {
+                const now = new Date();
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const startOfWeek = new Date(today);
+                startOfWeek.setDate(today.getDate() - today.getDay());
+                
+                // Vérifier si les défis quotidiens doivent être réinitialisés
+                if (!gameStats.lastDailyReset || new Date(gameStats.lastDailyReset) < today) {
+                    generateDailyChallenges();
+                    gameStats.lastDailyReset = today.toISOString();
+                    gameStats.dailyGames = 0;
+                    saveStats();
+                }
+                
+                // Vérifier si les défis hebdomadaires doivent être réinitialisés
+                if (!gameStats.lastWeeklyReset || new Date(gameStats.lastWeeklyReset) < startOfWeek) {
+                    generateWeeklyChallenges();
+                    gameStats.lastWeeklyReset = startOfWeek.toISOString();
+                    gameStats.weeklyGames = 0;
+                    saveStats();
+                }
+                
+                // Afficher les défis
+                displayChallenges();
+            }
+            
+            // Générer des défis quotidiens
+            function generateDailyChallenges() {
+                dailyChallenges = [];
+                
+                // Sélectionner 3 défis aléatoires
+                const shuffled = [...possibleDailyChallenges].sort(() => 0.5 - Math.random());
+                const selected = shuffled.slice(0, 3);
+                
+                selected.forEach(challenge => {
+                    dailyChallenges.push({
+                        ...challenge,
+                        progress: 0,
+                        completed: false
+                    });
+                });
+                
+                localStorage.setItem('dailyChallenges', JSON.stringify(dailyChallenges));
+            }
+            
+            // Générer des défis hebdomadaires
+            function generateWeeklyChallenges() {
+                weeklyChallenges = [];
+                
+                // Sélectionner 2 défis aléatoires
+                const shuffled = [...possibleWeeklyChallenges].sort(() => 0.5 - Math.random());
+                const selected = shuffled.slice(0, 2);
+                
+                selected.forEach(challenge => {
+                    weeklyChallenges.push({
+                        ...challenge,
+                        progress: 0,
+                        completed: false
+                    });
+                });
+                
+                localStorage.setItem('weeklyChallenges', JSON.stringify(weeklyChallenges));
+            }
+            
+            // Afficher les défis
+            function displayChallenges() {
+                // Afficher les défis quotidiens
+                dailyChallengesContainer.innerHTML = '';
+                dailyChallenges.forEach(challenge => {
+                    const challengeEl = createChallengeElement(challenge, 'daily');
+                    dailyChallengesContainer.appendChild(challengeEl);
+                });
+                
+                // Afficher les défis hebdomadaires
+                weeklyChallengesContainer.innerHTML = '';
+                weeklyChallenges.forEach(challenge => {
+                    const challengeEl = createChallengeElement(challenge, 'weekly');
+                    weeklyChallengesContainer.appendChild(challengeEl);
+                });
+            }
+            
+            // Créer un élément de défi
+            function createChallengeElement(challenge, type) {
+                const challengeEl = document.createElement('div');
+                challengeEl.classList.add('challenge-item');
+                if (challenge.completed) {
+                    challengeEl.classList.add('completed');
+                }
+                
+                const progressPercent = Math.min(100, (challenge.progress / challenge.target) * 100);
+                
+                let timerHtml = '';
+                if (type === 'daily') {
+                    const tomorrow = new Date();
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    tomorrow.setHours(0, 0, 0, 0);
+                    const hoursLeft = Math.floor((tomorrow - new Date()) / (1000 * 60 * 60));
+                    timerHtml = `<div class="challenge-timer">${hoursLeft}h</div>`;
+                } else if (type === 'weekly') {
+                    const nextWeek = new Date();
+                    nextWeek.setDate(nextWeek.getDate() + (7 - nextWeek.getDay()));
+                    nextWeek.setHours(0, 0, 0, 0);
+                    const daysLeft = Math.floor((nextWeek - new Date()) / (1000 * 60 * 60 * 24));
+                    timerHtml = `<div class="challenge-timer">${daysLeft}j</div>`;
+                }
+                
+                challengeEl.innerHTML = `
+                    ${timerHtml}
+                    <div class="challenge-title">${challenge.title}</div>
+                    <div class="challenge-desc">${challenge.description}</div>
+                    <div class="challenge-progress">
+                        <div class="challenge-progress-fill" style="width: ${progressPercent}%"></div>
+                    </div>
+                    <div class="challenge-reward">Récompense: ${challenge.reward} points</div>
+                `;
+                
+                return challengeEl;
+            }
+            
+            // Mettre à jour la progression des défis
+            function updateChallengesProgress(type, data = {}) {
+                // Mettre à jour les défis quotidiens
+                dailyChallenges.forEach(challenge => {
+                    if (challenge.completed) return;
+                    
+                    let shouldUpdate = false;
+                    
+                    if (challenge.type === 'games' && type === 'game') {
+                        if (!challenge.difficulty || data.difficulty === challenge.difficulty) {
+                            challenge.progress = Math.min(challenge.target, gameStats.dailyGames);
+                            shouldUpdate = true;
+                        }
+                    } else if (challenge.type === 'time' && type === 'game' && data.time < challenge.timeLimit) {
+                        challenge.progress = Math.min(challenge.target, challenge.progress + 1);
+                        shouldUpdate = true;
+                    } else if (challenge.type === 'noCheck' && type === 'noCheck') {
+                        challenge.progress = Math.min(challenge.target, challenge.progress + 1);
+                        shouldUpdate = true;
+                    } else if (challenge.type === 'themes' && type === 'themes') {
+                        const usedThemes = JSON.parse(localStorage.getItem('usedThemes')) || [];
+                        challenge.progress = Math.min(challenge.target, usedThemes.length);
+                        shouldUpdate = true;
+                    }
+                    
+                    if (shouldUpdate) {
+                        if (challenge.progress >= challenge.target && !challenge.completed) {
+                            challenge.completed = true;
+                            score += challenge.reward;
+                            updateDisplay();
+                            showNotification(`Défi quotidien complété: ${challenge.title} ! +${challenge.reward} points`);
+                            
+                            // Vérifier si le trophée de guerrier quotidien est débloqué
+                            const completedDaily = dailyChallenges.filter(c => c.completed).length;
+                            if (completedDaily >= 3) {
+                                unlockAchievement('daily-warrior');
+                            }
+                        }
+                        
+                        localStorage.setItem('dailyChallenges', JSON.stringify(dailyChallenges));
+                    }
+                });
+                
+                // Mettre à jour les défis hebdomadaires
+                weeklyChallenges.forEach(challenge => {
+                    if (challenge.completed) return;
+                    
+                    let shouldUpdate = false;
+                    
+                    if (challenge.type === 'games' && type === 'game') {
+                        challenge.progress = Math.min(challenge.target, gameStats.weeklyGames);
+                        shouldUpdate = true;
+                    } else if (challenge.type === 'time' && type === 'game' && data.time < challenge.timeLimit) {
+                        challenge.progress = Math.min(challenge.target, challenge.progress + 1);
+                        shouldUpdate = true;
+                    } else if (challenge.type === 'noHints' && type === 'noHints') {
+                        challenge.progress = Math.min(challenge.target, challenge.progress + 1);
+                        shouldUpdate = true;
+                    } else if (challenge.type === 'themes' && type === 'themes') {
+                        const usedThemes = JSON.parse(localStorage.getItem('usedThemes')) || [];
+                        challenge.progress = Math.min(challenge.target, usedThemes.length);
+                        shouldUpdate = true;
+                    } else if (challenge.type === 'achievements' && type === 'achievements') {
+                        challenge.progress = Math.min(challenge.target, unlockedAchievements.length);
+                        shouldUpdate = true;
+                    }
+                    
+                    if (shouldUpdate) {
+                        if (challenge.progress >= challenge.target && !challenge.completed) {
+                            challenge.completed = true;
+                            score += challenge.reward;
+                            updateDisplay();
+                            showNotification(`Défi hebdomadaire complété: ${challenge.title} ! +${challenge.reward} points`);
+                            
+                            // Vérifier si le trophée de champion hebdomadaire est débloqué
+                            const completedWeekly = weeklyChallenges.filter(c => c.completed).length;
+                            if (completedWeekly >= 2) {
+                                unlockAchievement('weekly-champion');
+                            }
+                        }
+                        
+                        localStorage.setItem('weeklyChallenges', JSON.stringify(weeklyChallenges));
+                    }
+                });
+                
+                // Mettre à jour l'affichage des défis
+                displayChallenges();
+            }
+            
+            // Créer la grille de Sudoku
+            function createGrid() {
+                sudokuGrid.innerHTML = '';
+                correctCells = Array(81).fill(false);
+                
+                for (let i = 0; i < 81; i++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('sudoku-cell');
+                    cell.dataset.index = i;
+                    
+                    // Ajouter les bordures épaisses pour les blocs 3x3
+                    const row = Math.floor(i / 9);
+                    const col = i % 9;
+                    
+                    if (col % 3 === 2 && col < 8) {
+                        cell.style.borderRight = '2px solid var(--border-color)';
+                    }
+                    
+                    if (row % 3 === 2 && row < 8) {
+                        cell.style.borderBottom = '2px solid var(--border-color)';
+                    }
+                    
+                    cell.addEventListener('click', () => selectCell(i));
+                    sudokuGrid.appendChild(cell);
+                }
+            }
+            
+            // Générer un Sudoku
+            function generateSudoku(difficulty) {
+                // Réinitialiser les tableaux
+                gameBoard = Array(81).fill(0);
+                solutionBoard = Array(81).fill(0);
+                correctCells = Array(81).fill(false);
+                
+                // Générer une solution complète
+                fillBoard(solutionBoard);
+                
+                // Copier la solution dans le jeu
+                gameBoard = [...solutionBoard];
+                
+                // Supprimer des chiffres en fonction de la difficulté
+                const cellsToRemove = Math.min(20 + difficulty * 5, 60);
+                let removed = 0;
+                
+                while (removed < cellsToRemove) {
+                    const index = Math.floor(Math.random() * 81);
+                    if (gameBoard[index] !== 0) {
+                        gameBoard[index] = 0;
+                        removed++;
+                    }
+                }
+                
+                // Mettre à jour l'affichage
+                updateGrid();
+            }
+            
+            // Remplir le tableau avec une solution valide (backtracking)
+            function fillBoard(board) {
+                const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+                
+                for (let i = 0; i < 81; i++) {
+                    if (board[i] === 0) {
+                        shuffleArray(numbers);
+                        
+                        for (const num of numbers) {
+                            if (isValidMove(board, i, num)) {
+                                board[i] = num;
+                                
+                                if (fillBoard(board)) {
+                                    return true;
+                                }
+                                
+                                board[i] = 0;
+                            }
+                        }
+                        
+                        return false;
+                    }
+                }
+                
+                return true;
+            }
+            
+            // Vérifier si un mouvement est valide
+            function isValidMove(board, index, num) {
+                const row = Math.floor(index / 9);
+                const col = index % 9;
+                
+                // Vérifier la ligne
+                for (let c = 0; c < 9; c++) {
+                    if (board[row * 9 + c] === num) return false;
+                }
+                
+                // Vérifier la colonne
+                for (let r = 0; r < 9; r++) {
+                    if (board[r * 9 + col] === num) return false;
+                }
+                
+                // Vérifier le bloc 3x3
+                const blockRowStart = Math.floor(row / 3) * 3;
+                const blockColStart = Math.floor(col / 3) * 3;
+                
+                for (let r = blockRowStart; r < blockRowStart + 3; r++) {
+                    for (let c = blockColStart; c < blockColStart + 3; c++) {
+                        if (board[r * 9 + c] === num) return false;
+                    }
+                }
+                
+                return true;
+            }
+            
+            // Mélanger un tableau
+            function shuffleArray(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+            }
+            
+            // Mettre à jour l'affichage de la grille
+            function updateGrid() {
+                const cells = sudokuGrid.querySelectorAll('.sudoku-cell');
+                
+                cells.forEach((cell, index) => {
+                    cell.textContent = '';
+                    cell.classList.remove('fixed', 'error', 'selected', 'highlight');
+                    
+                    if (gameBoard[index] !== 0) {
+                        cell.textContent = gameBoard[index];
+                        
+                        // Vérifier si c'est une case fixe (fournie au départ)
+                        if (solutionBoard[index] !== 0 && gameBoard[index] === solutionBoard[index]) {
+                            // Si c'est une cellule qui était déjà dans la grille de départ
+                            if (solutionBoard[index] !== 0 && gameBoard[index] === solutionBoard[index] && !correctCells[index]) {
+                                cell.classList.add('fixed');
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Sélectionner une cellule
+            function selectCell(index) {
+                // Désélectionner la cellule précédente
+                if (selectedCell !== null) {
+                    sudokuGrid.children[selectedCell].classList.remove('selected');
+                }
+                
+                // Sélectionner la nouvelle cellule
+                selectedCell = index;
+                sudokuGrid.children[index].classList.add('selected');
+                
+                // Mettre en évidence les cases liées
+                highlightRelatedCells(index);
+            }
+            
+            // Mettre en évidence les cases liées (ligne, colonne, bloc)
+            function highlightRelatedCells(index) {
+                const row = Math.floor(index / 9);
+                const col = index % 9;
+                
+                // Mettre en évidence la ligne et la colonne
+                for (let i = 0; i < 9; i++) {
+                    sudokuGrid.children[row * 9 + i].classList.add('highlight');
+                    sudokuGrid.children[i * 9 + col].classList.add('highlight');
+                }
+                
+                // Mettre en évidence le bloc 3x3
+                const blockRowStart = Math.floor(row / 3) * 3;
+                const blockColStart = Math.floor(col / 3) * 3;
+                
+                for (let r = blockRowStart; r < blockRowStart + 3; r++) {
+                    for (let c = blockColStart; c < blockColStart + 3; c++) {
+                        sudokuGrid.children[r * 9 + c].classList.add('highlight');
+                    }
+                }
+            }
+            
+            // Placer un nombre dans la cellule sélectionnée
+            function placeNumber(num) {
+                if (selectedCell === null || gameBoard[selectedCell] !== 0) return;
+                
+                // Vérifier si le mouvement est valide
+                if (!isValidMove(gameBoard, selectedCell, num)) {
+                    // Mouvement invalide
+                    sudokuGrid.children[selectedCell].classList.add('error');
+                    setTimeout(() => {
+                        sudokuGrid.children[selectedCell].classList.remove('error');
+                    }, 500);
+                    
+                    // Perte d'énergie
+                    power = Math.max(0, power - 10);
+                    updatePowerMeter();
+                    return;
+                }
+                
+                // Placer le nombre
+                gameBoard[selectedCell] = num;
+                sudokuGrid.children[selectedCell].textContent = num;
+                
+                // Vérifier si c'est la bonne réponse et si c'est la première fois
+                if (num === solutionBoard[selectedCell] && !correctCells[selectedCell]) {
+                    // Marquer la cellule comme correcte
+                    correctCells[selectedCell] = true;
+                    
+                    // Gain de points seulement si c'est la première fois
+                    score += 10 * level;
+                    updateDisplay();
+                }
+                
+                // Vérifier si le jeu est terminé
+                if (isGameComplete()) {
+                    endGame();
+                }
+                
+                // Démarrer le timer si ce n'est pas déjà fait
+                if (!gameStarted) {
+                    startTimer();
+                    gameStarted = true;
+                }
+            }
+            
+            // Vérifier si le jeu est terminé
+            function isGameComplete() {
+                for (let i = 0; i < 81; i++) {
+                    if (gameBoard[i] === 0 || gameBoard[i] !== solutionBoard[i]) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            
+            // Démarrer le timer
+            function startTimer() {
+                timerInterval = setInterval(() => {
+                    timer++;
+                    updateTimer();
+                    
+                    // Vérifier si le succès "Persévérant" est débloqué
+                    if (timer >= 1800 && !unlockedAchievements.includes('persistent')) { // 30 minutes
+                        unlockAchievement('persistent');
+                    }
+                }, 1000);
+            }
+            
+            // Mettre à jour l'affichage du timer
+            function updateTimer() {
+                const minutes = Math.floor(timer / 60);
+                const seconds = timer % 60;
+                timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+            
+            // Mettre à jour l'affichage
+            function updateDisplay() {
+                levelDisplay.textContent = level;
+                scoreDisplay.textContent = score;
+                hintBtn.textContent = `Indice (${hints})`;
+                updatePowerMeter();
+            }
+            
+            // Mettre à jour la jauge d'énergie
+            function updatePowerMeter() {
+                powerFill.style.width = `${power}%`;
+                
+                // Changer la couleur en fonction du niveau d'énergie
+                if (power > 70) {
+                    powerFill.style.background = 'linear-gradient(90deg, #4caf50, #8bc34a)';
+                } else if (power > 30) {
+                    powerFill.style.background = 'linear-gradient(90deg, #ffeb3b, #ffc107)';
+                } else {
+                    powerFill.style.background = 'linear-gradient(90deg, #ff9800, #f44336)';
+                }
+            }
+            
+            // Utiliser un indice
+            function useHint() {
+                if (hints <= 0 || selectedCell === null) return;
+                
+                hints--;
+                updateDisplay();
+                
+                // Révéler la réponse pour la cellule sélectionnée
+                gameBoard[selectedCell] = solutionBoard[selectedCell];
+                sudokuGrid.children[selectedCell].textContent = solutionBoard[selectedCell];
+                
+                // Marquer la cellule comme correcte
+                correctCells[selectedCell] = true;
+                
+                // Perte d'énergie
+                power = Math.max(0, power - 20);
+                updatePowerMeter();
+                
+                // Vérifier si le jeu est terminé
+                if (isGameComplete()) {
+                    endGame();
+                }
+            }
+            
+            // Vérifier la solution
+            function checkSolution() {
+                let errors = 0;
+                
+                for (let i = 0; i < 81; i++) {
+                    if (gameBoard[i] !== 0 && gameBoard[i] !== solutionBoard[i]) {
+                        sudokuGrid.children[i].classList.add('error');
+                        errors++;
+                    } else {
+                        sudokuGrid.children[i].classList.remove('error');
+                    }
+                }
+                
+                if (errors === 0) {
+                    // Pas d'erreurs
+                    power = Math.min(100, power + 5);
+                    updatePowerMeter();
+                } else {
+                    // Des erreurs trouvées
+                    power = Math.max(0, power - 15);
+                    updatePowerMeter();
+                }
+            }
+            
+            // Effacer la cellule sélectionnée
+            function eraseCell() {
+                if (selectedCell === null || gameBoard[selectedCell] === 0) return;
+                
+                gameBoard[selectedCell] = 0;
+                sudokuGrid.children[selectedCell].textContent = '';
+            }
+            
+            // Basculer le mode notes
+            function toggleNotesMode() {
+                notesMode = !notesMode;
+                noteBtn.classList.toggle('active');
+                noteBtn.textContent = notesMode ? 'Note ✓' : 'Note';
+            }
+            
+            // Démarrer une nouvelle partie
+            function startNewGame() {
+                clearInterval(timerInterval);
+                timer = 0;
+                gameStarted = false;
+                hints = 3;
+                power = 100;
+                selectedCell = null;
+                updateDisplay();
+                updateTimer();
+                generateSudoku(level);
+                
+                // Incrémenter le nombre de parties jouées
+                gameStats.gamesPlayed++;
+                gameStats.dailyGames++;
+                gameStats.weeklyGames++;
+                saveStats();
+                
+                // Mettre à jour les défis
+                updateChallengesProgress('game', { difficulty: level <= 3 ? 'easy' : level <= 7 ? 'medium' : 'hard' });
+            }
+            
+            // Terminer le jeu
+            function endGame() {
+                clearInterval(timerInterval);
+                
+                // Calculer le score final
+                const timeBonus = Math.max(0, 1000 - timer * 2);
+                const powerBonus = power * 10;
+                const finalScore = score + timeBonus + powerBonus;
+                
+                // Sauvegarder le niveau comme terminé
+                if (!completedLevels.includes(level)) {
+                    completedLevels.push(level);
+                    localStorage.setItem('completedLevels', JSON.stringify(completedLevels));
+                }
+                
+                // Mettre à jour les statistiques
+                gameStats.gamesWon++;
+                if (level > gameStats.maxLevel) {
+                    gameStats.maxLevel = level;
+                }
+                if (!gameStats.bestTime || timer < gameStats.bestTime) {
+                    gameStats.bestTime = timer;
+                }
+                if (finalScore > gameStats.bestScore) {
+                    gameStats.bestScore = finalScore;
+                }
+                saveStats();
+                
+                // Mettre à jour les défis
+                updateChallengesProgress('game', { time: timer });
+                
+                // Vérifier si le défi "sans faute" est complété
+                let hasErrors = false;
+                for (let i = 0; i < 81; i++) {
+                    if (gameBoard[i] !== 0 && gameBoard[i] !== solutionBoard[i]) {
+                        hasErrors = true;
+                        break;
+                    }
+                }
+                
+                if (!hasErrors) {
+                    updateChallengesProgress('noCheck');
+                    unlockAchievement('sudoku-ninja');
+                }
+                
+                // Vérifier si le défi "sans indices" est complété
+                if (hints === 3) {
+                    updateChallengesProgress('noHints');
+                }
+                
+                // Vérifier les succès
+                if (!unlockedAchievements.includes('first-win')) {
+                    unlockAchievement('first-win');
+                }
+                
+                if (timer < 300 && !unlockedAchievements.includes('speed-demon')) { // Moins de 5 minutes
+                    unlockAchievement('speed-demon');
+                }
+                
+                if (hints === 3 && !unlockedAchievements.includes('perfectionist')) {
+                    unlockAchievement('perfectionist');
+                }
+                
+                if (level >= 10 && !unlockedAchievements.includes('master')) {
+                    unlockAchievement('master');
+                }
+                
+                // Afficher le modal de victoire
+                document.getElementById('completed-level').textContent = level;
+                document.getElementById('final-score').textContent = finalScore;
+                document.getElementById('final-time').textContent = timerDisplay.textContent;
+                document.getElementById('next-level').textContent = level + 1;
+                
+                // Mettre à jour la barre de progression
+                const progress = (completedLevels.length / 10) * 100;
+                document.getElementById('level-progress').style.width = `${progress}%`;
+                
+                victoryModal.style.display = 'flex';
+            }
+            
+            // Passer au niveau suivant
+            function goToNextLevel() {
+                level++;
+                victoryModal.style.display = 'none';
+                startNewGame();
+            }
+            
+            // Débloquer un succès
+            function unlockAchievement(achievementId) {
+                if (unlockedAchievements.includes(achievementId)) return;
+                
+                unlockedAchievements.push(achievementId);
+                localStorage.setItem('unlockedAchievements', JSON.stringify(unlockedAchievements));
+                
+                // Afficher une notification
+                const achievement = achievements.find(a => a.id === achievementId);
+                showNotification(`Succès débloqué: ${achievement.name} ${achievement.icon}`);
+                
+                // Mettre à jour les statistiques
+                updateStats();
+                
+                // Mettre à jour les défis
+                updateChallengesProgress('achievements');
+            }
+            
+            // Afficher une notification
+            function showNotification(message) {
+                const notification = document.createElement('div');
+                notification.classList.add('notification');
+                notification.textContent = message;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.style.animation = 'slideDown 0.3s ease reverse';
+                    setTimeout(() => {
+                        document.body.removeChild(notification);
+                    }, 300);
+                }, 3000);
+            }
+            
+            // Charger les succès
+            function loadAchievements() {
+                achievementsContainer.innerHTML = '';
+                
+                achievements.forEach(achievement => {
+                    const achievementEl = document.createElement('div');
+                    achievementEl.classList.add('achievement');
+                    
+                    if (unlockedAchievements.includes(achievement.id)) {
+                        achievementEl.classList.add('unlocked');
+                    }
+                    
+                    achievementEl.innerHTML = `
+                        <div class="achievement-icon">${achievement.icon}</div>
+                        <div class="achievement-name">${achievement.name}</div>
+                        <div class="achievement-desc">${achievement.description}</div>
+                    `;
+                    
+                    achievementsContainer.appendChild(achievementEl);
+                });
+            }
+            
+            // Mettre à jour les statistiques
+            function updateStats() {
+                statGames.textContent = gameStats.gamesPlayed;
+                statWins.textContent = gameStats.gamesWon;
+                statLevel.textContent = gameStats.maxLevel;
+                statTime.textContent = gameStats.bestTime ? formatTime(gameStats.bestTime) : '0:00';
+                statScore.textContent = gameStats.bestScore;
+                statAchievements.textContent = `${unlockedAchievements.length}/${achievements.length}`;
+            }
+            
+            // Formater le temps
+            function formatTime(seconds) {
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            }
+            
+            // Sauvegarder les statistiques
+            function saveStats() {
+                localStorage.setItem('gameStats', JSON.stringify(gameStats));
+            }
+            
+            // Initialiser le jeu
+            initGame();
+        });
+    </script>
+</body>
+</html>
