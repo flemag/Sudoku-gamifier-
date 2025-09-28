@@ -1042,6 +1042,7 @@
             let timerInterval = null;
             let power = 100;
             let gameStarted = false;
+            let errorsMade = false;
             let completedLevels = JSON.parse(localStorage.getItem('completedLevels')) || [];
             let unlockedAchievements = JSON.parse(localStorage.getItem('unlockedAchievements')) || [];
             let gameStats = JSON.parse(localStorage.getItem('gameStats')) || {
@@ -1053,7 +1054,8 @@
                 dailyGames: 0,
                 weeklyGames: 0,
                 lastDailyReset: null,
-                lastWeeklyReset: null
+                lastWeeklyReset: null,
+                perfectStreak: 0
             };
             
             // Tableau pour suivre les cellules déjà marquées comme correctes
@@ -1076,13 +1078,18 @@
                 { id: 'first-win', name: 'Première Victoire', icon: '🏆', description: 'Compléter votre premier Sudoku', isMystery: false },
                 { id: 'speed-demon', name: 'Démon de la Vitesse', icon: '⚡', description: 'Compléter un niveau en moins de 5 minutes', isMystery: false },
                 { id: 'perfectionist', name: 'Perfectionniste', icon: '💎', description: 'Compléter un niveau sans utiliser d\'indices', isMystery: true },
-                { id: 'persistent', name: 'Persévérant', icon: '🔥', description: 'Jouer pendant 30 minutes', isMystery: false },
+                { id: 'persistent', name: 'Persévérant', icon: '⏳', description: 'Jouer pendant 30 minutes', isMystery: false },
                 { id: 'explorer', name: 'Explorateur', icon: '🗺️', description: 'Essayer tous les thèmes', isMystery: false },
                 { id: 'master', name: 'Maître du Sudoku', icon: '👑', description: 'Atteindre le niveau 10', isMystery: false },
                 { id: 'daily-warrior', name: 'Guerrier Quotidien', icon: '🗓️', description: 'Compléter 3 défis quotidiens', isMystery: false },
                 { id: 'weekly-champion', name: 'Champion Hebdomadaire', icon: '🏅', description: 'Compléter 2 défis hebdomadaires', isMystery: false },
                 { id: 'challenge-master', name: 'Maître des Défis', icon: '🎯', description: 'Compléter 5 défis consécutifs', isMystery: true },
-                { id: 'sudoku-ninja', name: 'Ninja du Sudoku', icon: '🥷', description: 'Compléter un niveau sans aucune erreur', isMystery: true }
+                { id: 'sudoku-ninja', name: 'Ninja du Sudoku', icon: '🥷', description: 'Compléter un niveau sans aucune erreur', isMystery: true },
+                { id: 'conqueror', name: 'Le Conquérant', icon: '🏰', description: 'Atteindre le niveau 20', isMystery: false },
+                { id: 'strategist', name: 'Le Stratège', icon: '🧠', description: 'Gagner un niveau difficile (10+) sans indice', isMystery: false },
+                { id: 'phoenix', name: 'Le Phénix', icon: '🔥', description: 'Gagner avec moins de 30% d\'énergie', isMystery: false },
+                { id: 'perfect-streak', name: 'La Série Parfaite', icon: '💯', description: 'Compléter 3 grilles de suite sans erreur', isMystery: true },
+                { id: 'collector', name: 'Le Collectionneur', icon: '🌟', description: 'Débloquer tous les autres trophées', isMystery: true, isPrestige: true }
             ];
             
             // Défis quotidiens possibles
@@ -1716,6 +1723,7 @@
                 // Vérifier si le mouvement est valide
                 if (!isValidMove(gameBoard, selectedCell, num)) {
                     // Mouvement invalide
+                    errorsMade = true; // Marquer qu'une erreur a été commise
                     sudokuGrid.children[selectedCell].classList.add('error');
                     setTimeout(() => {
                         sudokuGrid.children[selectedCell].classList.remove('error');
@@ -1877,6 +1885,7 @@
                 hints = 3;
                 power = 100;
                 selectedCell = null;
+                errorsMade = false; // Réinitialiser le suivi des erreurs
 
                 if (isNewLevel) {
                     gameStats.gamesPlayed++;
@@ -1960,6 +1969,30 @@
                 if (level >= 10 && !unlockedAchievements.includes('master')) {
                     unlockAchievement('master');
                 }
+
+                // Vérifier les nouveaux trophées
+                if (level >= 20 && !unlockedAchievements.includes('conqueror')) {
+                    unlockAchievement('conqueror');
+                }
+
+                if (level >= 10 && hints === 3 && !unlockedAchievements.includes('strategist')) {
+                    unlockAchievement('strategist');
+                }
+
+                if (power < 30 && !unlockedAchievements.includes('phoenix')) {
+                    unlockAchievement('phoenix');
+                }
+
+                // Gérer la série parfaite
+                if (!errorsMade) {
+                    gameStats.perfectStreak = (gameStats.perfectStreak || 0) + 1;
+                    if (gameStats.perfectStreak >= 3 && !unlockedAchievements.includes('perfect-streak')) {
+                        unlockAchievement('perfect-streak');
+                    }
+                } else {
+                    gameStats.perfectStreak = 0;
+                }
+                saveStats();
                 
                 // Afficher le modal de victoire
                 document.getElementById('completed-level').textContent = level;
@@ -1998,6 +2031,14 @@
                 
                 // Mettre à jour les défis
                 updateChallengesProgress('achievements');
+
+                // Vérifier si le trophée "Collectionneur" peut être débloqué
+                const nonCollectorAchievements = achievements.filter(a => a.id !== 'collector');
+                const allUnlocked = nonCollectorAchievements.every(a => unlockedAchievements.includes(a.id));
+
+                if (allUnlocked && !unlockedAchievements.includes('collector')) {
+                    unlockAchievement('collector');
+                }
             }
             
             // Afficher une notification
@@ -2026,14 +2067,8 @@
                     
                     const isUnlocked = unlockedAchievements.includes(achievement.id);
 
-                    if (isUnlocked) {
-                        achievementEl.classList.add('unlocked');
-                        if (achievement.isMystery) {
-                            achievementEl.classList.add('prestige');
-                        }
-                    }
-
                     if (achievement.isMystery && !isUnlocked) {
+                        // C'est un trophée mystère qui est encore verrouillé. Afficher le placeholder.
                         achievementEl.classList.add('mystery');
                         achievementEl.innerHTML = `
                             <div class="achievement-icon">?</div>
@@ -2041,12 +2076,23 @@
                             <div class="achievement-desc">???</div>
                         `;
                     } else {
-                        // Pour les trophées normaux ou les trophées mystères débloqués
+                        // C'est soit un trophée normal, soit un trophée mystère qui a été débloqué.
+                        // Afficher ses vrais détails.
                         achievementEl.innerHTML = `
                             <div class="achievement-icon">${achievement.icon}</div>
                             <div class="achievement-name">${achievement.name}</div>
                             <div class="achievement-desc">${achievement.description}</div>
                         `;
+
+                        if (isUnlocked) {
+                            // S'il est débloqué, ajouter la classe 'unlocked'.
+                            achievementEl.classList.add('unlocked');
+
+                            // S'il s'agit également d'un trophée de prestige, ajouter la classe 'prestige'.
+                            if (achievement.isPrestige) {
+                                achievementEl.classList.add('prestige');
+                            }
+                        }
                     }
 
                     achievementsContainer.appendChild(achievementEl);
