@@ -1509,27 +1509,81 @@
                 gameBoard = Array(81).fill(0);
                 solutionBoard = Array(81).fill(0);
                 correctCells = Array(81).fill(false);
-                
+
                 // Générer une solution complète
                 fillBoard(solutionBoard);
-                
+
                 // Copier la solution dans le jeu
-                gameBoard = [...solutionBoard];
-                
-                // Supprimer des chiffres en fonction de la difficulté
-                const cellsToRemove = Math.min(20 + difficulty * 5, 60);
-                let removed = 0;
-                
-                while (removed < cellsToRemove) {
-                    const index = Math.floor(Math.random() * 81);
-                    if (gameBoard[index] !== 0) {
-                        gameBoard[index] = 0;
-                        removed++;
+                let puzzle = [...solutionBoard];
+
+                // Créer une liste d'indices de cellules à supprimer, et la mélanger
+                const indices = Array.from(Array(81).keys());
+                shuffleArray(indices);
+
+                let removedCount = 0;
+                // Le nombre de cases à retirer dépend de la difficulté.
+                // Facile: ~37 trous (44 indices)
+                // Moyen: ~45 trous (36 indices)
+                // Difficile: ~55 trous (26 indices)
+                const holes = 35 + (difficulty * 2);
+
+                for (let i = 0; i < indices.length; i++) {
+                    if (removedCount >= holes) break;
+
+                    const index = indices[i];
+
+                    // Garder une copie de la valeur au cas où on devrait la remettre
+                    const temp = puzzle[index];
+                    if (temp === 0) continue; // Already removed
+
+                    puzzle[index] = 0;
+
+                    // Créer une copie du tableau pour le solveur
+                    const puzzleCopy = [...puzzle];
+
+                    // Si le puzzle n'a plus de solution unique, on annule
+                    if (countSolutions(puzzleCopy) !== 1) {
+                        puzzle[index] = temp;
+                    } else {
+                        removedCount++;
                     }
                 }
-                
+
+                gameBoard = [...puzzle];
+
                 // Mettre à jour l'affichage
                 updateGrid();
+            }
+
+            // Compter le nombre de solutions possibles pour un tableau donné
+            function countSolutions(board) {
+                let counter = 0;
+
+                const findEmptyIndex = (b) => b.indexOf(0);
+
+                function solveRecursive() {
+                    const index = findEmptyIndex(board);
+                    if (index === -1) {
+                        counter++;
+                        return;
+                    }
+
+                    for (let num = 1; num <= 9; num++) {
+                        if (isValidMove(board, index, num)) {
+                            board[index] = num;
+                            solveRecursive();
+
+                            if (counter > 1) {
+                                board[index] = 0; // Backtrack before exiting
+                                return;
+                            }
+                        }
+                    }
+                    board[index] = 0; // Backtrack
+                }
+
+                solveRecursive();
+                return counter;
             }
             
             // Remplir le tableau avec une solution valide (backtracking)
