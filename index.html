@@ -16,6 +16,7 @@
             --theme-bg: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
             --header-height: 60px;
             --nav-height: 70px;
+            --sudoku-grid-width: calc(9 * var(--cell-size) + 8px + 4px);
         }
 
         * {
@@ -188,6 +189,53 @@
             transform: translateY(0);
         }
 
+        .level-selection-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+            max-width: 500px;
+        }
+
+        .level-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            border: 2px solid var(--primary-color);
+            background: white;
+            color: var(--primary-color);
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .level-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .level-btn.completed {
+            background: #e8f5e9;
+            border-color: #4caf50;
+            color: #4caf50;
+        }
+
+        .level-btn.next {
+            background: #e3f2fd;
+            border-color: var(--primary-color);
+        }
+
+        .level-btn.selected {
+            background: var(--primary-color);
+            color: white;
+            transform: scale(1.1);
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        }
+
         /* Jeu */
         .game-container {
             display: flex;
@@ -230,6 +278,7 @@
             background-color: var(--border-color);
             border: 2px solid var(--primary-color);
             margin-bottom: 15px;
+            width: var(--sudoku-grid-width);
         }
 
         .sudoku-cell {
@@ -248,8 +297,14 @@
             background-color: #e9f5ff;
         }
 
+        .sudoku-cell.highlight {
+            background-color: #e3f2fd;
+        }
+
         .sudoku-cell.selected {
-            background-color: #cfe2ff;
+            background-color: var(--primary-color);
+            color: white;
+            box-shadow: inset 0 0 0 2px var(--accent-color);
         }
 
         .sudoku-cell.fixed {
@@ -261,10 +316,6 @@
         .sudoku-cell.error {
             background-color: #ffebee;
             color: var(--accent-color);
-        }
-
-        .sudoku-cell.highlight {
-            background-color: #e3f2fd;
         }
 
         /* Bordures épaisses pour les blocs 3x3 */
@@ -326,10 +377,10 @@
 
         .number-pad {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 5px;
             width: 100%;
-            max-width: 270px;
+            max-width: var(--sudoku-grid-width);
         }
 
         .number-btn {
@@ -342,6 +393,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+
+        #note-btn {
+            grid-column: span 3;
+            aspect-ratio: auto;
+            padding: 8px;
         }
 
         .power-meter {
@@ -469,6 +526,35 @@
         .achievement.unlocked {
             background: #e8f5e9;
             border: 1px solid #4caf50;
+        }
+
+        .achievement.mystery {
+            background: #e0e0e0;
+            color: #bdbdbd;
+            border: 1px dashed #9e9e9e;
+            cursor: default;
+        }
+
+        .achievement.mystery:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        .achievement.mystery .achievement-icon {
+            color: #9e9e9e;
+        }
+
+        .achievement.prestige,
+        .achievement.prestige:hover {
+            background: linear-gradient(145deg, #fceabb, #f8b500);
+            border: 2px solid #ffd700;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+            color: #4a2c00;
+            transform: scale(1.05);
+        }
+
+        .achievement.prestige .achievement-icon {
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.7);
         }
 
         .achievement-icon {
@@ -673,6 +759,7 @@
         @media (max-width: 480px) {
             :root {
                 --cell-size: 28px;
+                --sudoku-grid-width: calc(9 * var(--cell-size) + 8px + 2px);
             }
             
             .header h1 {
@@ -688,7 +775,6 @@
             }
             
             .number-pad {
-                max-width: 250px;
                 gap: 4px;
             }
             
@@ -759,6 +845,13 @@
                 <p>Résolvez des grilles, améliorez votre score et devenez le maître du Sudoku !</p>
             </div>
             
+            <div class="home-description">
+                <h2>Choix du niveau</h2>
+                <div id="level-selection-container">
+                    <!-- Level buttons will be generated by JS -->
+                </div>
+            </div>
+
             <button class="play-btn" id="start-game-btn">Commencer à jouer</button>
             
             <div class="home-description">
@@ -941,6 +1034,7 @@
             let solutionBoard = [];
             let selectedCell = null;
             let level = 1;
+            let selectedLevel = 1;
             let score = 0;
             let hints = 3;
             let notesMode = false;
@@ -948,6 +1042,7 @@
             let timerInterval = null;
             let power = 100;
             let gameStarted = false;
+            let errorsMade = false;
             let completedLevels = JSON.parse(localStorage.getItem('completedLevels')) || [];
             let unlockedAchievements = JSON.parse(localStorage.getItem('unlockedAchievements')) || [];
             let gameStats = JSON.parse(localStorage.getItem('gameStats')) || {
@@ -959,7 +1054,8 @@
                 dailyGames: 0,
                 weeklyGames: 0,
                 lastDailyReset: null,
-                lastWeeklyReset: null
+                lastWeeklyReset: null,
+                perfectStreak: 0
             };
             
             // Tableau pour suivre les cellules déjà marquées comme correctes
@@ -979,16 +1075,21 @@
             
             // Succès
             const achievements = [
-                { id: 'first-win', name: 'Première Victoire', icon: '🏆', description: 'Compléter votre premier Sudoku' },
-                { id: 'speed-demon', name: 'Démon de la Vitesse', icon: '⚡', description: 'Compléter un niveau en moins de 5 minutes' },
-                { id: 'perfectionist', name: 'Perfectionniste', icon: '💎', description: 'Compléter un niveau sans utiliser d\'indices' },
-                { id: 'persistent', name: 'Persévérant', icon: '🔥', description: 'Jouer pendant 30 minutes' },
-                { id: 'explorer', name: 'Explorateur', icon: '🗺️', description: 'Essayer tous les thèmes' },
-                { id: 'master', name: 'Maître du Sudoku', icon: '👑', description: 'Atteindre le niveau 10' },
-                { id: 'daily-warrior', name: 'Guerrier Quotidien', icon: '🗓️', description: 'Compléter 3 défis quotidiens' },
-                { id: 'weekly-champion', name: 'Champion Hebdomadaire', icon: '🏅', description: 'Compléter 2 défis hebdomadaires' },
-                { id: 'challenge-master', name: 'Maître des Défis', icon: '🎯', description: 'Compléter 5 défis consécutifs' },
-                { id: 'sudoku-ninja', name: 'Ninja du Sudoku', icon: '🥷', description: 'Compléter un niveau sans aucune erreur' }
+                { id: 'first-win', name: 'Première Victoire', icon: '🏆', description: 'Compléter votre premier Sudoku', isMystery: false },
+                { id: 'speed-demon', name: 'Démon de la Vitesse', icon: '⚡', description: 'Compléter un niveau en moins de 5 minutes', isMystery: false },
+                { id: 'perfectionist', name: 'Perfectionniste', icon: '💎', description: 'Compléter un niveau sans utiliser d\'indices', isMystery: true },
+                { id: 'persistent', name: 'Persévérant', icon: '⏳', description: 'Jouer pendant 30 minutes', isMystery: false },
+                { id: 'explorer', name: 'Explorateur', icon: '🗺️', description: 'Essayer tous les thèmes', isMystery: false },
+                { id: 'master', name: 'Maître du Sudoku', icon: '👑', description: 'Atteindre le niveau 10', isMystery: false },
+                { id: 'daily-warrior', name: 'Guerrier Quotidien', icon: '🗓️', description: 'Compléter 3 défis quotidiens', isMystery: false },
+                { id: 'weekly-champion', name: 'Champion Hebdomadaire', icon: '🏅', description: 'Compléter 2 défis hebdomadaires', isMystery: false },
+                { id: 'challenge-master', name: 'Maître des Défis', icon: '🎯', description: 'Compléter 5 défis consécutifs', isMystery: true },
+                { id: 'sudoku-ninja', name: 'Ninja du Sudoku', icon: '🥷', description: 'Compléter un niveau sans aucune erreur', isMystery: true },
+                { id: 'conqueror', name: 'Le Conquérant', icon: '🏰', description: 'Atteindre le niveau 20', isMystery: false },
+                { id: 'strategist', name: 'Le Stratège', icon: '🧠', description: 'Gagner un niveau difficile (10+) sans indice', isMystery: false },
+                { id: 'phoenix', name: 'Le Phénix', icon: '🔥', description: 'Gagner avec moins de 30% d\'énergie', isMystery: false },
+                { id: 'perfect-streak', name: 'La Série Parfaite', icon: '💯', description: 'Compléter 3 grilles de suite sans erreur', isMystery: true },
+                { id: 'collector', name: 'Le Collectionneur', icon: '🌟', description: 'Débloquer tous les autres trophées', isMystery: true, isPrestige: true }
             ];
             
             // Défis quotidiens possibles
@@ -1030,6 +1131,7 @@
                     switch(targetSection) {
                         case 'home':
                             pageTitle.textContent = 'Sudoku Quest';
+                            generateLevelSelection();
                             break;
                         case 'game':
                             pageTitle.textContent = 'Jeu - Sudoku Quest';
@@ -1045,6 +1147,7 @@
             
             // Bouton pour commencer le jeu
             startGameBtn.addEventListener('click', () => {
+                level = selectedLevel; // Set the game level to the selected one
                 navBtns.forEach(btn => {
                     btn.classList.remove('active');
                     if (btn.dataset.section === 'game') {
@@ -1059,9 +1162,7 @@
                 
                 pageTitle.textContent = 'Jeu - Sudoku Quest';
                 
-                if (!gameStarted) {
-                    initGame();
-                }
+                startNewGame();
             });
             
             // Onglets de défis
@@ -1086,9 +1187,10 @@
                 createGrid();
                 generateSudoku(level);
                 updateDisplay();
+                generateLevelSelection();
                 
                 // Écouteurs d'événements
-                newGameBtn.addEventListener('click', startNewGame);
+                newGameBtn.addEventListener('click', () => startNewGame(false));
                 hintBtn.addEventListener('click', useHint);
                 checkBtn.addEventListener('click', checkSolution);
                 eraseBtn.addEventListener('click', eraseCell);
@@ -1414,27 +1516,81 @@
                 gameBoard = Array(81).fill(0);
                 solutionBoard = Array(81).fill(0);
                 correctCells = Array(81).fill(false);
-                
+
                 // Générer une solution complète
                 fillBoard(solutionBoard);
-                
+
                 // Copier la solution dans le jeu
-                gameBoard = [...solutionBoard];
-                
-                // Supprimer des chiffres en fonction de la difficulté
-                const cellsToRemove = Math.min(20 + difficulty * 5, 60);
-                let removed = 0;
-                
-                while (removed < cellsToRemove) {
-                    const index = Math.floor(Math.random() * 81);
-                    if (gameBoard[index] !== 0) {
-                        gameBoard[index] = 0;
-                        removed++;
+                let puzzle = [...solutionBoard];
+
+                // Créer une liste d'indices de cellules à supprimer, et la mélanger
+                const indices = Array.from(Array(81).keys());
+                shuffleArray(indices);
+
+                let removedCount = 0;
+                // Le nombre de cases à retirer dépend de la difficulté.
+                // Facile: ~37 trous (44 indices)
+                // Moyen: ~45 trous (36 indices)
+                // Difficile: ~55 trous (26 indices)
+                const holes = 35 + (difficulty * 2);
+
+                for (let i = 0; i < indices.length; i++) {
+                    if (removedCount >= holes) break;
+
+                    const index = indices[i];
+
+                    // Garder une copie de la valeur au cas où on devrait la remettre
+                    const temp = puzzle[index];
+                    if (temp === 0) continue; // Already removed
+
+                    puzzle[index] = 0;
+
+                    // Créer une copie du tableau pour le solveur
+                    const puzzleCopy = [...puzzle];
+
+                    // Si le puzzle n'a plus de solution unique, on annule
+                    if (countSolutions(puzzleCopy) !== 1) {
+                        puzzle[index] = temp;
+                    } else {
+                        removedCount++;
                     }
                 }
-                
+
+                gameBoard = [...puzzle];
+
                 // Mettre à jour l'affichage
                 updateGrid();
+            }
+
+            // Compter le nombre de solutions possibles pour un tableau donné
+            function countSolutions(board) {
+                let counter = 0;
+
+                const findEmptyIndex = (b) => b.indexOf(0);
+
+                function solveRecursive() {
+                    const index = findEmptyIndex(board);
+                    if (index === -1) {
+                        counter++;
+                        return;
+                    }
+
+                    for (let num = 1; num <= 9; num++) {
+                        if (isValidMove(board, index, num)) {
+                            board[index] = num;
+                            solveRecursive();
+
+                            if (counter > 1) {
+                                board[index] = 0; // Backtrack before exiting
+                                return;
+                            }
+                        }
+                    }
+                    board[index] = 0; // Backtrack
+                }
+
+                solveRecursive();
+                return counter;
             }
             
             // Remplir le tableau avec une solution valide (backtracking)
@@ -1524,15 +1680,16 @@
             
             // Sélectionner une cellule
             function selectCell(index) {
-                // Désélectionner la cellule précédente
-                if (selectedCell !== null) {
-                    sudokuGrid.children[selectedCell].classList.remove('selected');
-                }
-                
+                // Clear previous highlights and selection
+                const cells = sudokuGrid.querySelectorAll('.sudoku-cell');
+                cells.forEach(cell => {
+                    cell.classList.remove('selected', 'highlight');
+                });
+
                 // Sélectionner la nouvelle cellule
                 selectedCell = index;
                 sudokuGrid.children[index].classList.add('selected');
-                
+
                 // Mettre en évidence les cases liées
                 highlightRelatedCells(index);
             }
@@ -1566,6 +1723,7 @@
                 // Vérifier si le mouvement est valide
                 if (!isValidMove(gameBoard, selectedCell, num)) {
                     // Mouvement invalide
+                    errorsMade = true; // Marquer qu'une erreur a été commise
                     sudokuGrid.children[selectedCell].classList.add('error');
                     setTimeout(() => {
                         sudokuGrid.children[selectedCell].classList.remove('error');
@@ -1719,21 +1877,26 @@
             }
             
             // Démarrer une nouvelle partie
-            function startNewGame() {
+            function startNewGame(isNewLevel = true) {
                 clearInterval(timerInterval);
                 timer = 0;
+                score = 0;
                 gameStarted = false;
                 hints = 3;
                 power = 100;
                 selectedCell = null;
+                errorsMade = false; // Réinitialiser le suivi des erreurs
+
+                if (isNewLevel) {
+                    gameStats.gamesPlayed++;
+                    gameStats.dailyGames++;
+                    gameStats.weeklyGames++;
+                }
+
                 updateDisplay();
                 updateTimer();
                 generateSudoku(level);
                 
-                // Incrémenter le nombre de parties jouées
-                gameStats.gamesPlayed++;
-                gameStats.dailyGames++;
-                gameStats.weeklyGames++;
                 saveStats();
                 
                 // Mettre à jour les défis
@@ -1779,7 +1942,7 @@
                         break;
                     }
                 }
-                
+
                 if (!hasErrors) {
                     updateChallengesProgress('noCheck');
                     unlockAchievement('sudoku-ninja');
@@ -1806,6 +1969,30 @@
                 if (level >= 10 && !unlockedAchievements.includes('master')) {
                     unlockAchievement('master');
                 }
+
+                // Vérifier les nouveaux trophées
+                if (level >= 20 && !unlockedAchievements.includes('conqueror')) {
+                    unlockAchievement('conqueror');
+                }
+
+                if (level >= 10 && hints === 3 && !unlockedAchievements.includes('strategist')) {
+                    unlockAchievement('strategist');
+                }
+
+                if (power < 30 && !unlockedAchievements.includes('phoenix')) {
+                    unlockAchievement('phoenix');
+                }
+
+                // Gérer la série parfaite
+                if (!errorsMade) {
+                    gameStats.perfectStreak = (gameStats.perfectStreak || 0) + 1;
+                    if (gameStats.perfectStreak >= 3 && !unlockedAchievements.includes('perfect-streak')) {
+                        unlockAchievement('perfect-streak');
+                    }
+                } else {
+                    gameStats.perfectStreak = 0;
+                }
+                saveStats();
                 
                 // Afficher le modal de victoire
                 document.getElementById('completed-level').textContent = level;
@@ -1823,6 +2010,7 @@
             // Passer au niveau suivant
             function goToNextLevel() {
                 level++;
+                selectedLevel = level;
                 victoryModal.style.display = 'none';
                 startNewGame();
             }
@@ -1843,6 +2031,14 @@
                 
                 // Mettre à jour les défis
                 updateChallengesProgress('achievements');
+
+                // Vérifier si le trophée "Collectionneur" peut être débloqué
+                const nonCollectorAchievements = achievements.filter(a => a.id !== 'collector');
+                const allUnlocked = nonCollectorAchievements.every(a => unlockedAchievements.includes(a.id));
+
+                if (allUnlocked && !unlockedAchievements.includes('collector')) {
+                    unlockAchievement('collector');
+                }
             }
             
             // Afficher une notification
@@ -1869,16 +2065,36 @@
                     const achievementEl = document.createElement('div');
                     achievementEl.classList.add('achievement');
                     
-                    if (unlockedAchievements.includes(achievement.id)) {
-                        achievementEl.classList.add('unlocked');
+                    const isUnlocked = unlockedAchievements.includes(achievement.id);
+
+                    if (achievement.isMystery && !isUnlocked) {
+                        // C'est un trophée mystère qui est encore verrouillé. Afficher le placeholder.
+                        achievementEl.classList.add('mystery');
+                        achievementEl.innerHTML = `
+                            <div class="achievement-icon">?</div>
+                            <div class="achievement-name">Trophée Mystère</div>
+                            <div class="achievement-desc">???</div>
+                        `;
+                    } else {
+                        // C'est soit un trophée normal, soit un trophée mystère qui a été débloqué.
+                        // Afficher ses vrais détails.
+                        achievementEl.innerHTML = `
+                            <div class="achievement-icon">${achievement.icon}</div>
+                            <div class="achievement-name">${achievement.name}</div>
+                            <div class="achievement-desc">${achievement.description}</div>
+                        `;
+
+                        if (isUnlocked) {
+                            // S'il est débloqué, ajouter la classe 'unlocked'.
+                            achievementEl.classList.add('unlocked');
+
+                            // S'il s'agit également d'un trophée de prestige, ajouter la classe 'prestige'.
+                            if (achievement.isPrestige) {
+                                achievementEl.classList.add('prestige');
+                            }
+                        }
                     }
-                    
-                    achievementEl.innerHTML = `
-                        <div class="achievement-icon">${achievement.icon}</div>
-                        <div class="achievement-name">${achievement.name}</div>
-                        <div class="achievement-desc">${achievement.description}</div>
-                    `;
-                    
+
                     achievementsContainer.appendChild(achievementEl);
                 });
             }
@@ -1903,6 +2119,53 @@
             // Sauvegarder les statistiques
             function saveStats() {
                 localStorage.setItem('gameStats', JSON.stringify(gameStats));
+            }
+
+            function generateLevelSelection() {
+                const container = document.getElementById('level-selection-container');
+                container.innerHTML = '';
+
+                const maxUnlockedLevel = gameStats.maxLevel;
+                selectedLevel = maxUnlockedLevel;
+
+                for (let i = 1; i <= maxUnlockedLevel + 1; i++) {
+                    if (i > 20) break; // Cap levels at 20 for now
+
+                    const btn = document.createElement('button');
+                    btn.classList.add('level-btn');
+                    btn.dataset.level = i;
+                    btn.textContent = i;
+
+                    if (completedLevels.includes(i)) {
+                        btn.classList.add('completed');
+                    } else if (i === maxUnlockedLevel) {
+                        btn.classList.add('next');
+                    }
+
+                    if (i > maxUnlockedLevel) {
+                        btn.disabled = true;
+                    }
+
+                    if (i === selectedLevel) {
+                        btn.classList.add('selected');
+                    }
+
+                    btn.addEventListener('click', () => {
+                        if (btn.disabled) return;
+
+                        selectedLevel = parseInt(btn.dataset.level);
+
+                        // Update selection visual
+                        container.querySelectorAll('.level-btn').forEach(b => b.classList.remove('selected'));
+                        btn.classList.add('selected');
+
+                        // Update play button text
+                        startGameBtn.textContent = `Jouer le niveau ${selectedLevel}`;
+                    });
+
+                    container.appendChild(btn);
+                }
+                startGameBtn.textContent = `Jouer le niveau ${selectedLevel}`;
             }
             
             // Initialiser le jeu
