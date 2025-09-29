@@ -1016,6 +1016,16 @@
             const themeButtons = document.querySelectorAll('.theme-btn');
             const numberButtons = document.querySelectorAll('.number-btn');
             
+            // Sound definitions for jsfxr
+            const sounds = {
+                click: [0,,0.0121,,0.2061,0.5221,,,,,,0.2541,0.0137,,,,1,,,,,0.5],
+                select: [0,,0.0827,0.3432,0.2207,0.597,,,,,,0.3556,0.0137,,,,1,,,,,0.5],
+                correct: [0,,0.22,0.4,0.4,0.2,,,,,,,,,,,,1,,,,,0.5],
+                error: [3,,0.1,0.8,0.2,0.1,,,,,,,,,,,,1,,,,,0.5],
+                win: [0,0.5,0.5,0.2,0.8,0.2,,-0.4,0.4,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,1,1,-0.1,0.1,-0.1,0.5],
+                trophy: [1,0.5,0.5,0.2,0.8,0.2,,0.4,0.4,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,1,1,-0.1,0.1,-0.1,0.5]
+            };
+
             // Éléments de statistiques
             const statGames = document.getElementById('stat-games');
             const statWins = document.getElementById('stat-wins');
@@ -1113,6 +1123,7 @@
             // Navigation
             navBtns.forEach(btn => {
                 btn.addEventListener('click', () => {
+                    playSound('click');
                     const targetSection = btn.dataset.section;
                     
                     // Mettre à jour les sections
@@ -1147,6 +1158,7 @@
             
             // Bouton pour commencer le jeu
             startGameBtn.addEventListener('click', () => {
+                playSound('click');
                 level = selectedLevel; // Set the game level to the selected one
                 navBtns.forEach(btn => {
                     btn.classList.remove('active');
@@ -1168,6 +1180,7 @@
             // Onglets de défis
             challengeTabs.forEach(tab => {
                 tab.addEventListener('click', () => {
+                    playSound('click');
                     const challengeType = tab.dataset.challenge;
                     
                     // Mettre à jour les onglets
@@ -1190,13 +1203,14 @@
                 generateLevelSelection();
                 
                 // Écouteurs d'événements
-                newGameBtn.addEventListener('click', () => startNewGame(false));
-                hintBtn.addEventListener('click', useHint);
-                checkBtn.addEventListener('click', checkSolution);
-                eraseBtn.addEventListener('click', eraseCell);
-                noteBtn.addEventListener('click', toggleNotesMode);
-                nextLevelBtn.addEventListener('click', goToNextLevel);
+                newGameBtn.addEventListener('click', () => { playSound('click'); startNewGame(false); });
+                hintBtn.addEventListener('click', () => { playSound('click'); useHint(); });
+                checkBtn.addEventListener('click', () => { playSound('click'); checkSolution(); });
+                eraseBtn.addEventListener('click', () => { playSound('click'); eraseCell(); });
+                noteBtn.addEventListener('click', () => { playSound('click'); toggleNotesMode(); });
+                nextLevelBtn.addEventListener('click', () => { playSound('click'); goToNextLevel(); });
                 backToMenuBtn.addEventListener('click', () => {
+                    playSound('click');
                     victoryModal.style.display = 'none';
                     navBtns.forEach(btn => {
                         btn.classList.remove('active');
@@ -1216,6 +1230,7 @@
                 // Thèmes
                 themeButtons.forEach(btn => {
                     btn.addEventListener('click', () => {
+                        playSound('click');
                         const theme = btn.dataset.theme;
                         document.body.style.background = themes[theme];
                         themeButtons.forEach(b => b.classList.remove('active'));
@@ -1244,6 +1259,7 @@
                 numberButtons.forEach(btn => {
                     if (btn.id !== 'note-btn') {
                         btn.addEventListener('click', () => {
+                            playSound('click');
                             const number = parseInt(btn.dataset.number);
                             if (selectedCell) {
                                 placeNumber(number);
@@ -1272,6 +1288,13 @@
                 
                 // Initialiser les défis
                 initChallenges();
+            }
+
+            // Helper function to play sounds
+            function playSound(soundName) {
+                if (sounds[soundName]) {
+                    jsfxr(sounds[soundName]).play();
+                }
             }
             
             // Initialiser les défis
@@ -1680,6 +1703,7 @@
             
             // Sélectionner une cellule
             function selectCell(index) {
+                playSound('select');
                 // Clear previous highlights and selection
                 const cells = sudokuGrid.querySelectorAll('.sudoku-cell');
                 cells.forEach(cell => {
@@ -1723,6 +1747,7 @@
                 // Vérifier si le mouvement est valide
                 if (!isValidMove(gameBoard, selectedCell, num)) {
                     // Mouvement invalide
+                    playSound('error');
                     errorsMade = true; // Marquer qu'une erreur a été commise
                     sudokuGrid.children[selectedCell].classList.add('error');
                     setTimeout(() => {
@@ -1736,6 +1761,7 @@
                 }
                 
                 // Placer le nombre
+                playSound('correct');
                 gameBoard[selectedCell] = num;
                 sudokuGrid.children[selectedCell].textContent = num;
                 
@@ -1905,6 +1931,7 @@
             
             // Terminer le jeu
             function endGame() {
+                playSound('win');
                 clearInterval(timerInterval);
                 
                 // Calculer le score final
@@ -2019,6 +2046,7 @@
             function unlockAchievement(achievementId) {
                 if (unlockedAchievements.includes(achievementId)) return;
                 
+                playSound('trophy');
                 unlockedAchievements.push(achievementId);
                 localStorage.setItem('unlockedAchievements', JSON.stringify(unlockedAchievements));
                 
@@ -2172,5 +2200,7 @@
             initGame();
         });
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/jsfxr@1.2.2/riffwave.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsfxr@1.2.2/sfxr.js"></script>
 </body>
 </html>
