@@ -842,6 +842,11 @@ var _sfxr_getAudioFn = function(wave) {
     actx = _actx;
 
     if (actx) {
+      // Try to resume the context if it's suspended
+      if (actx.state === 'suspended') {
+        actx.resume();
+      }
+
       var buff = actx.createBuffer(1, wave.buffer.length, wave.header.sampleRate);
       var nowBuffering = buff.getChannelData(0);
       for (var i=0;i<wave.buffer.length;i++) {
@@ -852,6 +857,10 @@ var _sfxr_getAudioFn = function(wave) {
         "channels": [],
         "setVolume": function(v) { volume = v; return obj; },
         "play": function() {
+          // Double-check and resume context right before playing
+          if (actx.state === 'suspended') {
+            actx.resume();
+          }
           var proc = actx.createBufferSource();
           proc.buffer = buff;
           var gainNode = actx.createGain()
