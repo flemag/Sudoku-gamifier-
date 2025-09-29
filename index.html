@@ -810,8 +810,8 @@
             }
         }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/jsfxr@1.2.2/riffwave.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsfxr@1.2.2/sfxr.js"></script>
+    <script src="riffwave.js"></script>
+    <script src="sfxr.js"></script>
 </head>
 <body>
     <!-- Header -->
@@ -1294,8 +1294,28 @@
 
             // Helper function to play sounds
             function playSound(soundName) {
-                if (sounds[soundName]) {
-                    jsfxr(sounds[soundName]).play();
+                if (sounds[soundName] && window.jsfxr && window.jsfxr.Params && window.jsfxr.parameters && window.jsfxr.sfxr) {
+                    try {
+                        const paramsArray = sounds[soundName];
+                        const params = new jsfxr.Params();
+                        const order = jsfxr.parameters.order;
+
+                        for (let i = 0; i < order.length; i++) {
+                            const key = order[i];
+                            const value = paramsArray[i];
+                            if (value !== undefined) {
+                                params[key] = value;
+                            }
+                        }
+
+                        if (paramsArray.length > order.length && paramsArray[order.length] !== undefined) {
+                            params.sound_vol = paramsArray[order.length];
+                        }
+
+                        jsfxr.sfxr.play(params);
+                    } catch (e) {
+                        console.error("Error playing sound:", e);
+                    }
                 }
             }
             
