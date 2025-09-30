@@ -810,8 +810,6 @@
             }
         }
     </style>
-    <script src="riffwave.js"></script>
-    <script src="sfxr.js"></script>
 </head>
 <body>
     <!-- Header -->
@@ -1018,16 +1016,6 @@
             const themeButtons = document.querySelectorAll('.theme-btn');
             const numberButtons = document.querySelectorAll('.number-btn');
             
-            // Sound definitions for jsfxr
-            const sounds = {
-                click: [0,,0.0121,,0.2061,0.5221,,,,,,0.2541,0.0137,,,,1,,,,,0.5],
-                select: [0,,0.0827,0.3432,0.2207,0.597,,,,,,0.3556,0.0137,,,,1,,,,,0.5],
-                correct: [0,,0.22,0.4,0.4,0.2,,,,,,,,,,,,1,,,,,0.5],
-                error: [3,,0.1,0.8,0.2,0.1,,,,,,,,,,,,1,,,,,0.5],
-                win: [0,0.5,0.5,0.2,0.8,0.2,,-0.4,0.4,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,1,1,-0.1,0.1,-0.1,0.5],
-                trophy: [1,0.5,0.5,0.2,0.8,0.2,,0.4,0.4,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,1,1,-0.1,0.1,-0.1,0.5]
-            };
-
             // Éléments de statistiques
             const statGames = document.getElementById('stat-games');
             const statWins = document.getElementById('stat-wins');
@@ -1292,33 +1280,126 @@
                 initChallenges();
             }
 
-            // Helper function to play sounds
-            function playSound(soundName) {
-                if (sounds[soundName] && window.jsfxr && window.jsfxr.Params && window.jsfxr.parameters && window.jsfxr.sfxr) {
+            let audioCtx;
+
+            // Initialize AudioContext on first user interaction to comply with browser autoplay policies.
+            function initAudio() {
+                if (!audioCtx) {
                     try {
-                        const paramsArray = sounds[soundName];
-                        const params = new jsfxr.Params();
-                        const order = jsfxr.parameters.order;
-
-                        for (let i = 0; i < order.length; i++) {
-                            const key = order[i];
-                            const value = paramsArray[i];
-                            if (value !== undefined) {
-                                params[key] = value;
-                            }
-                        }
-
-                        if (paramsArray.length > order.length && paramsArray[order.length] !== undefined) {
-                            params.sound_vol = paramsArray[order.length];
-                        }
-
-                        jsfxr.sfxr.play(params);
+                        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                     } catch (e) {
-                        console.error("Error playing sound:", e);
+                        console.error("Web Audio API is not supported in this browser.");
                     }
                 }
             }
-            
+            // We'll call this on the first click/touch to ensure the context is allowed to start.
+            document.body.addEventListener('click', initAudio, { once: true });
+            document.body.addEventListener('touchend', initAudio, { once: true });
+
+            function playSound(soundName) {
+                if (!audioCtx) {
+                    initAudio(); // Try to initialize it just in case
+                    if(!audioCtx) return; // If it's still not there, we can't play.
+                }
+
+                // Browsers may suspend the AudioContext after a period of inactivity.
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
+                let oscType = 'sine';
+                let freq = 440;
+                let duration = 0.1;
+                let vol = 0.2;
+
+                // Simple sound recipes
+                switch(soundName) {
+                    case 'click':
+                        oscType = 'triangle';
+                        freq = 800;
+                        duration = 0.05;
+                        vol = 0.1;
+                        break;
+                    case 'select':
+                        oscType = 'sine';
+                        freq = 523.25;
+                        duration = 0.1;
+                        vol = 0.15;
+                        break;
+                    case 'correct':
+                        oscType = 'sine';
+                        freq = 659.25;
+                        duration = 0.2;
+                        vol = 0.2;
+                        // Add a second higher note for a more pleasant sound
+                        const osc2 = audioCtx.createOscillator();
+                        const gain2 = audioCtx.createGain();
+                        osc2.connect(gain2);
+                        gain2.connect(audioCtx.destination);
+                        osc2.type = 'sine';
+                        osc2.frequency.setValueAtTime(880, audioCtx.currentTime);
+                        gain2.gain.setValueAtTime(vol * 0.8, audioCtx.currentTime + 0.1);
+                        gain2.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.2);
+                        osc2.start(audioCtx.currentTime + 0.1);
+                        osc2.stop(audioCtx.currentTime + 0.2);
+                        break;
+                    case 'error':
+                        oscType = 'sawtooth';
+                        freq = 110;
+                        duration = 0.2;
+                        vol = 0.15;
+                        break;
+                    case 'win':
+                        // A more complex sound: an ascending arpeggio
+                        const winNotes = [523.25, 659.25, 783.99, 1046.50];
+                        winNotes.forEach((noteFreq, i) => {
+                            const osc = audioCtx.createOscillator();
+                            const gain = audioCtx.createGain();
+                            osc.connect(gain);
+                            gain.connect(audioCtx.destination);
+                            osc.type = 'triangle';
+                            osc.frequency.setValueAtTime(noteFreq, audioCtx.currentTime);
+                            gain.gain.setValueAtTime(0.2, audioCtx.currentTime + i * 0.1);
+                            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + i * 0.1 + 0.1);
+                            osc.start(audioCtx.currentTime + i * 0.1);
+                            osc.stop(audioCtx.currentTime + i * 0.1 + 0.1);
+                        });
+                        return; // Return early as we've already generated the sound
+                    case 'trophy':
+                         // A bright, two-note sound
+                        const trophyNotes = [1046.50, 1318.51];
+                         trophyNotes.forEach((noteFreq, i) => {
+                            const osc = audioCtx.createOscillator();
+                            const gain = audioCtx.createGain();
+                            osc.connect(gain);
+                            gain.connect(audioCtx.destination);
+                            osc.type = 'sine';
+                            osc.frequency.setValueAtTime(noteFreq, audioCtx.currentTime);
+                            gain.gain.setValueAtTime(0.3, audioCtx.currentTime + i * 0.15);
+                            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + i * 0.15 + 0.2);
+                            osc.start(audioCtx.currentTime + i * 0.15);
+                            osc.stop(audioCtx.currentTime + i * 0.15 + 0.2);
+                        });
+                        return; // Return early
+                }
+
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                oscillator.type = oscType;
+                oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+                // A simple attack/decay envelope
+                gainNode.gain.setValueAtTime(vol, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+
+                oscillator.start(audioCtx.currentTime);
+                oscillator.stop(audioCtx.currentTime + duration);
+            }
+
             // Initialiser les défis
             function initChallenges() {
                 const now = new Date();
